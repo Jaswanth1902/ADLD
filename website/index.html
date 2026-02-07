@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microcontroller-Based Vending Machine Controller</title>
+   <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            <h1 class="hero-title">Microcontroller-Based Vending Machine Controller</h1>
+            <p class="hero-subtitle">FSM-Driven Firmware Simulation using Verilog HDL</p>
+            <p class="hero-description">
+                This project simulates the internal control logic of a microcontroller-based vending machine using Verilog HDL. 
+                The FSM represents firmware behavior, while registers and I/O signals abstract internal microcontroller resources.
+            </p>
+            <a href="#simulator" class="cta-button">Try It Live ⚡</a>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="#simulator">Interactive Demo</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#fsm">FSM Design</a>
+            <a href="#implementation">Verilog Code</a>
+            <a href="#conclusion">Conclusion</a>
+        </div>
+    </nav>
+
+    <!-- Interactive Simulator Section -->
+    <section id="simulator" class="section simulator-section">
+        <div class="container">
+            <h2 class="section-title">🎮 Interactive Demonstration</h2>
+            <p class="section-description">Experience the vending machine controller in real-time. Insert coins, select items, and observe FSM state transitions live.</p>
+            
+            <div class="demo-grid">
+                <!-- Vending Machine Visual -->
+                <div class="vending-machine-panel">
+                    <div class="vending-machine">
+                        <div class="machine-header">
+                            <div class="led-indicator">
+                                <span class="led" id="status-led"></span>
+                                <span id="status-text">IDLE</span>
+                            </div>
+                        </div>
+                        
+                        <div class="display-panel">
+                            <div class="credit-display">
+                                <span class="label">CREDIT</span>
+                                <span class="value" id="credit-value">₹0</span>
+                            </div>
+                            <div class="item-cost">
+                                <span class="label">ITEM COST</span>
+                                <span class="value">₹15</span>
+                            </div>
+                        </div>
+                        
+                        <div class="item-window">
+                            <div class="item" id="item-display">🥤</div>
+                            <div class="dispense-slot" id="dispense-slot"></div>
+                        </div>
+                        
+                        <div class="control-panel">
+                            <button class="coin-button coin-5" id="btn-coin-5">
+                                <span class="coin-value">₹5</span>
+                            </button>
+                            <button class="coin-button coin-10" id="btn-coin-10">
+                                <span class="coin-value">₹10</span>
+                            </button>
+                            <button class="action-button select-button" id="btn-select">
+                                SELECT ITEM
+                            </button>
+                            <button class="action-button reset-button" id="btn-reset">
+                                RESET
+                            </button>
+                        </div>
+                        
+                        <div class="change-tray" id="change-tray">
+                            <span class="change-label">Change Return</span>
+                            <span class="change-indicator" id="change-indicator">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="clock-info">
+                            <span>Clock Cycle: <strong id="cycle-count">0</strong></span>
+                            <span>Clock: <strong id="clock-state">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FSM Visualizer -->
+                <div class="fsm-panel">
+                    <h3>FSM State Diagram</h3>
+                    <svg id="fsm-diagram" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Definitions for markers -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#cbd5e1"/>
+                            </marker>
+                            <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="28" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+                            </marker>
+                        </defs>
+                        
+                        <!-- Transitions first (so lines are behind nodes) -->
+                        
+                        <!-- IDLE -> ACCEPT_COIN (Coin Inserted) -->
+                        <g class="transition-group">
+                            <path d="M 300 70 Q 150 70 150 150" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="200" y="90" class="transition-label">Coin detected</text>
+                        </g>
+
+                        <!-- ACCEPT_COIN -> IDLE (Insufficient Credit) -->
+                        <g class="transition-group">
+                            <path d="M 150 150 Q 150 100 270 75" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="180" y="120" class="transition-label">Credit < 15</text>
+                        </g>
+
+                        <!-- ACCEPT_COIN -> WAIT_SELECTION (Sufficient Credit) -->
+                        <g class="transition-group">
+                            <path d="M 150 150 L 450 150" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="300" y="140" class="transition-label">Credit ≥ 15</text>
+                        </g>
+
+                        <!-- WAIT_SELECTION -> ACCEPT_COIN (Add more money) -->
+                        <g class="transition-group">
+                            <path d="M 450 150 Q 300 180 150 150" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="300" y="175" class="transition-label">Coin detected</text>
+                        </g>
+
+                        <!-- WAIT_SELECTION -> DISPENSE_ITEM (Select) -->
+                        <g class="transition-group">
+                            <path d="M 450 150 Q 450 300 300 300" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="430" y="240" class="transition-label">Select pressed</text>
+                        </g>
+
+                        <!-- DISPENSE_ITEM -> IDLE (Exact Payment) -->
+                        <g class="transition-group">
+                           <path d="M 300 300 L 300 70" class="transition" marker-end="url(#arrowhead)"/>
+                           <text x="260" y="200" class="transition-label">Credit = 15</text>
+                        </g>
+
+                        <!-- DISPENSE_ITEM -> RETURN_CHANGE (Overpayment) -->
+                        <g class="transition-group">
+                            <path d="M 300 300 L 450 300" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="375" y="290" class="transition-label">Credit > 15</text>
+                        </g>
+
+                        <!-- RETURN_CHANGE -> IDLE (Done) -->
+                        <g class="transition-group">
+                            <path d="M 450 300 Q 550 150 300 70" class="transition" marker-end="url(#arrowhead)"/>
+                            <text x="520" y="200" class="transition-label">Done</text>
+                        </g>
+
+                        <!-- Nodes -->
+                        <g id="state-idle" class="state-node active">
+                            <circle cx="300" cy="70" r="35" class="state-circle"/>
+                            <text x="300" y="75" class="state-text">IDLE</text>
+                        </g>
+                        
+                        <g id="state-accept" class="state-node">
+                            <circle cx="150" cy="150" r="35" class="state-circle"/>
+                            <text x="150" y="150" class="state-text">ACCEPT</text>
+                            <text x="150" y="165" class="state-text">COIN</text>
+                        </g>
+                        
+                        <g id="state-wait" class="state-node">
+                            <circle cx="450" cy="150" r="35" class="state-circle"/>
+                            <text x="450" y="150" class="state-text">WAIT</text>
+                            <text x="450" y="165" class="state-text">SELECT</text>
+                        </g>
+                        
+                        <g id="state-dispense" class="state-node">
+                            <circle cx="300" cy="300" r="35" class="state-circle"/>
+                            <text x="300" y="300" class="state-text">DISPENSE</text>
+                            <text x="300" y="315" class="state-text">ITEM</text>
+                        </g>
+                        
+                        <g id="state-change" class="state-node">
+                            <circle cx="450" cy="300" r="35" class="state-circle"/>
+                            <text x="450" y="300" class="state-text">RETURN</text>
+                            <text x="450" y="315" class="state-text">CHANGE</text>
+                        </g>
+                    </svg>
+                    
+                    <div class="event-log">
+                        <h4>Event Log</h4>
+                        <div id="log-content" class="log-content">
+                            <div class="log-entry">System initialized</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waveform Viewer -->
+            <div class="waveform-panel">
+                <h3>🌊 Live Waveform Viewer</h3>
+                <canvas id="waveform-canvas" width="1200" height="300"></canvas>
+                <div class="waveform-legend">
+                    <span><span class="legend-color" style="background: #10b981;"></span> clk</span>
+                    <span><span class="legend-color" style="background: #8b5cf6;"></span> coin_5</span>
+                    <span><span class="legend-color" style="background: #f59e0b;"></span> coin_10</span>
+                    <span><span class="legend-color" style="background: #3b82f6;"></span> select</span>
+                    <span><span class="legend-color" style="background: #ef4444;"></span> dispense</span>
+                    <span><span class="legend-color" style="background: #ec4899;"></span> change</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="section">
+        <div class="container">
+            <h2 class="section-title">🏗️ System Architecture</h2>
+            <p class="section-description">
+                The design follows a classic microcontroller architecture with separate control and datapath units.
+            </p>
+            
+            <div class="architecture-diagram">
+                <div class="arch-block gpio">
+                    <h4>I/O Interface</h4>
+                    <p>GPIO Peripheral</p>
+                    <ul>
+                        <li>Input synchronization</li>
+                        <li>Pulse detection</li>
+                        <li>Debouncing</li>
+                    </ul>
+                </div>
+                
+                <div class="arch-arrow">→</div>
+                
+                <div class="arch-block fsm">
+                    <h4>Control FSM</h4>
+                    <p>MCU Control Unit</p>
+                    <ul>
+                        <li>5-state machine</li>
+                        <li>Control signal generation</li>
+                        <li>Firmware logic</li>
+                    </ul>
+                </div>
+                
+                <div class="arch-arrow">→</div>
+                
+                <div class="arch-block register">
+                    <h4>Credit Register</h4>
+                    <p>Internal RAM</p>
+                    <ul>
+                        <li>8-bit storage</li>
+                        <li>Synchronous updates</li>
+                        <li>Load/decrement ops</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mapping-info">
+                <h3>Microcontroller Mapping</h3>
+                <table class="mapping-table">
+                    <tr>
+                        <th>Verilog Module</th>
+                        <th>MCU Component</th>
+                        <th>Function</th>
+                    </tr>
+                    <tr>
+                        <td><code>io_interface.v</code></td>
+                        <td>GPIO Peripheral</td>
+                        <td>Input conditioning and synchronization</td>
+                    </tr>
+                    <tr>
+                        <td><code>control_fsm.v</code></td>
+                        <td>CPU Control Unit</td>
+                        <td>FSM-based firmware execution</td>
+                    </tr>
+                    <tr>
+                        <td><code>credit_register.v</code></td>
+                        <td>Internal Register/RAM</td>
+                        <td>Data storage and manipulation</td>
+                    </tr>
+                    <tr>
+                        <td><code>vending_machine_top.v</code></td>
+                        <td>Complete MCU System</td>
+                        <td>Integration of all components</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FSM Design Section -->
+    <section id="fsm" class="section alt-bg">
+        <div class="container">
+            <h2 class="section-title">🔄 FSM Design</h2>
+            
+            <div class="fsm-info">
+                <h3>State Descriptions</h3>
+                <div class="state-grid">
+                    <div class="state-card">
+                        <h4>IDLE</h4>
+                        <p>Waiting for coin insertion. All outputs inactive.</p>
+                    </div>
+                    <div class="state-card">
+                        <h4>ACCEPT_COIN</h4>
+                        <p>Processing coin input, updating credit register.</p>
+                    </div>
+                    <div class="state-card">
+                        <h4>WAIT_SELECTION</h4>
+                        <p>Sufficient credit available, waiting for item selection.</p>
+                    </div>
+                    <div class="state-card">
+                        <h4>DISPENSE_ITEM</h4>
+                        <p>Item selected, activating dispense mechanism.</p>
+                    </div>
+                    <div class="state-card">
+                        <h4>RETURN_CHANGE</h4>
+                        <p>Returning excess credit as change.</p>
+                    </div>
+                </div>
+                
+                <h3>Why FSM for Microcontrollers?</h3>
+                <p>
+                    Finite State Machines are fundamental to embedded systems and microcontroller programming:
+                </p>
+                <ul class="feature-list">
+                    <li><strong>Deterministic Behavior:</strong> Each state has well-defined transitions and outputs</li>
+                    <li><strong>Low Resource Usage:</strong> Minimal memory footprint, ideal for resource-constrained MCUs</li>
+                    <li><strong>Easy Verification:</strong> State-based logic simplifies testing and debugging</li>
+                    <li><strong>Firmware-Friendly:</strong> Directly translates to embedded C state machines</li>
+                    <li><strong>Real-Time Response:</strong> Predictable execution time for each state transition</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Verilog Implementation Section -->
+    <section id="implementation" class="section">
+        <div class="container">
+            <h2 class="section-title">💻 Verilog Implementation</h2>
+            
+            <div class="code-showcase">
+                <h3>Control FSM (Excerpt)</h3>
+                <pre><code class="language-verilog">// State transition logic
+always @(posedge clk) begin
+    if (reset)
+        current_state <= IDLE;
+    else
+        current_state <= next_state;
+end
+
+// Next state combinational logic
+always @(*) begin
+    case (current_state)
+        IDLE: begin
+            if (coin_5_detected || coin_10_detected)
+                next_state = ACCEPT_COIN;
+        end
+        
+        ACCEPT_COIN: begin
+            if (current_credit >= ITEM_COST)
+                next_state = WAIT_SELECTION;
+            else
+                next_state = IDLE;
+        end
+        
+        WAIT_SELECTION: begin
+            if (select_detected)
+                next_state = DISPENSE_ITEM;
+            else if (coin_5_detected || coin_10_detected)
+                next_state = ACCEPT_COIN;
+        end
+        // ... more states
+    endcase
+end</code></pre>
+
+                <h3>Credit Register Module</h3>
+                <pre><code class="language-verilog">always @(posedge clk) begin
+    if (reset) begin
+        credit_out <= 8'd0;
+    end
+    else if (enable) begin
+        if (load) begin
+            // Add coin value to credit
+            if (credit_out + credit_in > 8'd255)
+                credit_out <= 8'd255;
+            else
+                credit_out <= credit_out + credit_in;
+        end
+        else if (decrement) begin
+            // Subtract item cost
+            if (credit_out >= 8'd15)
+                credit_out <= credit_out - 8'd15;
+        end
+    end
+end</code></pre>
+
+                <div class="code-files">
+                    <h3>Complete Source Files</h3>
+                    <ul>
+                        <li>📄 <code>vending_machine_top.v</code> - Top-level integration</li>
+                        <li>📄 <code>control_fsm.v</code> - FSM control unit (170 lines)</li>
+                        <li>📄 <code>credit_register.v</code> - Credit storage register (50 lines)</li>
+                        <li>📄 <code>io_interface.v</code> - GPIO interface (80 lines)</li>
+                        <li>📄 <code>vending_machine_tb.v</code> - Comprehensive testbench (200+ lines)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Conclusion Section Removed -->
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Microcontroller-Based Vending Machine Project | ADLD + Microcontrollers Domain</p>
+            <p>Software-only FSM simulation for academic evaluation</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/simulator.js"></script>
+    <script src="js/waveform-viewer.js"></script>
+    <script src="js/ui-controller.js"></script>
+</body>
+</html>
