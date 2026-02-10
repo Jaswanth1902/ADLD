@@ -26,19 +26,22 @@ class VendingMachineSimulator {
         this.cycle = 0;
         
         // Input signals
-        this.coin5Raw = false;
         this.coin10Raw = false;
+        this.coin20Raw = false;
+        this.coin50Raw = false;
         this.selectRaw = false;
         this.resetSignal = false;
         
         // Synchronized inputs (after io_interface processing)
-        this.coin5Sync = false;
         this.coin10Sync = false;
+        this.coin20Sync = false;
+        this.coin50Sync = false;
         this.selectSync = false;
         
         // Previous input states (for edge detection)
-        this.coin5Prev = false;
         this.coin10Prev = false;
+        this.coin20Prev = false;
+        this.coin50Prev = false;
         this.selectPrev = false;
         
         // Output signals
@@ -49,14 +52,15 @@ class VendingMachineSimulator {
         this.creditEnable = false;
         this.creditLoad = false;
         this.creditDecrement = false;
+        this.creditClear = false; // New signal
         this.creditValue = 0;
         
         // Internal state for latching inputs
         this.latchedCoinValue = 0;
         this.latchedSelect = false;
         
-        // Constants
-        this.ITEM_COST = 15;
+        // Constants - now dynamic
+        this.ITEM_COST = 15; // Default cost
         
         // Simulation control
         this.running = false;
@@ -75,6 +79,13 @@ class VendingMachineSimulator {
         this.onClockTick = null;
     }
     
+    // ========================================================================
+    // Configuration
+    // ========================================================================
+    setItemCost(cost) {
+        this.ITEM_COST = cost;
+    }
+
     // ========================================================================
     // Main Clock Tick (Positive Edge Triggered)
     // ========================================================================
@@ -113,23 +124,27 @@ class VendingMachineSimulator {
     updateIOInterface() {
         // Two-stage synchronizer (simplified to one stage for demo speed)
         // In real hardware, this would be 2 flip-flops
-        const coin5Synced = this.coin5Raw;
         const coin10Synced = this.coin10Raw;
+        const coin20Synced = this.coin20Raw;
+        const coin50Synced = this.coin50Raw;
         const selectSynced = this.selectRaw;
         
         // Edge detection - generate single-cycle pulses
-        this.coin5Sync = coin5Synced && !this.coin5Prev;
         this.coin10Sync = coin10Synced && !this.coin10Prev;
+        this.coin20Sync = coin20Synced && !this.coin20Prev;
+        this.coin50Sync = coin50Synced && !this.coin50Prev;
         this.selectSync = selectSynced && !this.selectPrev;
         
         // Store current values for next edge detection
-        this.coin5Prev = coin5Synced;
         this.coin10Prev = coin10Synced;
+        this.coin20Prev = coin20Synced;
+        this.coin50Prev = coin50Synced;
         this.selectPrev = selectSynced;
         
         // Clear raw inputs after sync (simulate button release)
-        this.coin5Raw = false;
         this.coin10Raw = false;
+        this.coin20Raw = false;
+        this.coin50Raw = false;
         this.selectRaw = false;
     }
     
@@ -173,11 +188,12 @@ class VendingMachineSimulator {
     computeNextState() {
         switch (this.currentState) {
             case this.STATES.IDLE:
-                if (this.coin5Sync || this.coin10Sync) {
+                if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
                     this.nextState = this.STATES.ACCEPT_COIN;
                     // Latch the coin value here so it's available in the next state
-                    if (this.coin5Sync) this.latchedCoinValue = 5;
-                    else if (this.coin10Sync) this.latchedCoinValue = 10;
+                    if (this.coin10Sync) this.latchedCoinValue = 10;
+                    else if (this.coin20Sync) this.latchedCoinValue = 20;
+                    else if (this.coin50Sync) this.latchedCoinValue = 50;
                 } else {
                     this.nextState = this.STATES.IDLE;
                 }
@@ -204,11 +220,12 @@ class VendingMachineSimulator {
                 if (this.selectSync || this.latchedSelect) {
                     this.nextState = this.STATES.DISPENSE_ITEM;
                     this.latchedSelect = false; // Clear latch upon transition
-                } else if (this.coin5Sync || this.coin10Sync) {
+                } else if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
                     this.nextState = this.STATES.ACCEPT_COIN;
                     // Latch the coin value here too
-                    if (this.coin5Sync) this.latchedCoinValue = 5;
-                    else if (this.coin10Sync) this.latchedCoinValue = 10;
+                    if (this.coin10Sync) this.latchedCoinValue = 10;
+                    else if (this.coin20Sync) this.latchedCoinValue = 20;
+                    else if (this.coin50Sync) this.latchedCoinValue = 50;
                 } else {
                     this.nextState = this.STATES.WAIT_SELECTION;
                 }
@@ -239,6 +256,7 @@ class VendingMachineSimulator {
         this.creditEnable = false;
         this.creditLoad = false;
         this.creditDecrement = false;
+        this.creditClear = false; // New control signal
         this.creditValue = 0;
         this.dispense = false;
         this.returnChange = false;
@@ -256,15 +274,13 @@ class VendingMachineSimulator {
                 
             case this.STATES.WAIT_SELECTION:
                 // Allow additional coin insertions
-                if (this.coin5Sync || this.coin10Sync) {
+                if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
                     this.creditEnable = true;
                     this.creditLoad = true;
                     
-                    if (this.coin5Sync) {
-                        this.creditValue = 5;
-                    } else if (this.coin10Sync) {
-                        this.creditValue = 10;
-                    }
+                    if (this.coin10Sync) this.creditValue = 10;
+                    else if (this.coin20Sync) this.creditValue = 20;
+                    else if (this.coin50Sync) this.creditValue = 50;
                 }
                 break;
                 
@@ -280,6 +296,9 @@ class VendingMachineSimulator {
                 
             case this.STATES.RETURN_CHANGE:
                 this.returnChange = true;
+                // Clear credit after returning change
+                this.creditEnable = true;
+                this.creditClear = true;
                 
                 if (this.onReturnChange) {
                     this.onReturnChange(this.credit);
@@ -295,7 +314,10 @@ class VendingMachineSimulator {
         const prevCredit = this.credit;
         
         if (this.creditEnable) {
-            if (this.creditLoad) {
+            if (this.creditClear) {
+                // Clear credit (reset to 0)
+                this.credit = 0;
+            } else if (this.creditLoad) {
                 // Add coin value (with saturation)
                 this.credit = Math.min(255, this.credit + this.creditValue);
             } else if (this.creditDecrement) {
@@ -320,8 +342,9 @@ class VendingMachineSimulator {
             cycle: this.cycle,
             clk: this.clk,
             reset: this.resetSignal,
-            coin5: this.coin5Sync,
             coin10: this.coin10Sync,
+            coin20: this.coin20Sync,
+            coin50: this.coin50Sync,
             select: this.selectSync,
             state: this.currentState,
             credit: this.credit,
@@ -338,12 +361,16 @@ class VendingMachineSimulator {
     // ========================================================================
     // Public Control Methods
     // ========================================================================
-    insertCoin5() {
-        this.coin5Raw = true;
-    }
-    
     insertCoin10() {
         this.coin10Raw = true;
+    }
+    
+    insertCoin20() {
+        this.coin20Raw = true;
+    }
+    
+    insertCoin50() {
+        this.coin50Raw = true;
     }
     
     selectItem() {

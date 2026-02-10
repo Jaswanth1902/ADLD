@@ -63,23 +63,35 @@
                         </div>
                         
                         <div class="item-window">
-                            <div class="item" id="item-display">🥤</div>
+                            <button class="nav-button prev-btn" id="prev-item">❮</button>
+                            <div class="item-display-container">
+                                <div class="item" id="item-icon">🥤</div>
+                                <div class="item-name" id="item-name">Milkshake</div>
+                            </div>
+                            <button class="nav-button next-btn" id="next-item">❯</button>
                             <div class="dispense-slot" id="dispense-slot"></div>
                         </div>
                         
                         <div class="control-panel">
-                            <button class="coin-button coin-5" id="btn-coin-5">
-                                <span class="coin-value">₹5</span>
-                            </button>
-                            <button class="coin-button coin-10" id="btn-coin-10">
-                                <span class="coin-value">₹10</span>
-                            </button>
-                            <button class="action-button select-button" id="btn-select">
-                                SELECT ITEM
-                            </button>
-                            <button class="action-button reset-button" id="btn-reset">
-                                RESET
-                            </button>
+                            <div class="coin-group">
+                                <button class="coin-button coin-10" id="btn-coin-10">
+                                    <span class="coin-label">₹10</span>
+                                </button>
+                                <button class="coin-button coin-20" id="btn-coin-20">
+                                    <span class="coin-label">₹20</span>
+                                </button>
+                                <button class="coin-button coin-50" id="btn-coin-50">
+                                    <span class="coin-label">₹50</span>
+                                </button>
+                            </div>
+                            <div class="action-group">
+                                <button class="action-button select-button" id="btn-select">
+                                    PUSH TO<br>SELECT
+                                </button>
+                                <button class="action-button reset-button" id="btn-reset">
+                                    REFUND<br>/ RESET
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="change-tray" id="change-tray">
