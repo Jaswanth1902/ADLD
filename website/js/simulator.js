@@ -30,6 +30,7 @@ class VendingMachineSimulator {
         this.coin20Raw = false;
         this.coin50Raw = false;
         this.selectRaw = false;
+        this.itemIdRaw = 0; // New: 3-bit item ID
         this.resetSignal = false;
         
         // Synchronized inputs (after io_interface processing)
@@ -37,6 +38,7 @@ class VendingMachineSimulator {
         this.coin20Sync = false;
         this.coin50Sync = false;
         this.selectSync = false;
+        this.itemIdSync = 0;
         
         // Previous input states (for edge detection)
         this.coin10Prev = false;
@@ -52,15 +54,11 @@ class VendingMachineSimulator {
         this.creditEnable = false;
         this.creditLoad = false;
         this.creditDecrement = false;
-        this.creditClear = false; // New signal
         this.creditValue = 0;
         
         // Internal state for latching inputs
         this.latchedCoinValue = 0;
-        this.latchedSelect = false;
-        
-        // Constants - now dynamic
-        this.ITEM_COST = 15; // Default cost
+        this.selectedItemCost = 255; // Default invalid
         
         // Simulation control
         this.running = false;
@@ -77,13 +75,14 @@ class VendingMachineSimulator {
         this.onDispense = null;
         this.onReturnChange = null;
         this.onClockTick = null;
+        this.stateJustChanged = false;
     }
     
     // ========================================================================
     // Configuration
     // ========================================================================
-    setItemCost(cost) {
-        this.ITEM_COST = cost;
+    setItemId(id) {
+        this.itemIdRaw = id;
     }
 
     // ========================================================================
@@ -123,17 +122,18 @@ class VendingMachineSimulator {
     // ========================================================================
     updateIOInterface() {
         // Two-stage synchronizer (simplified to one stage for demo speed)
-        // In real hardware, this would be 2 flip-flops
         const coin10Synced = this.coin10Raw;
         const coin20Synced = this.coin20Raw;
         const coin50Synced = this.coin50Raw;
         const selectSynced = this.selectRaw;
+        const itemIdSynced = this.itemIdRaw; // Sync ID
         
         // Edge detection - generate single-cycle pulses
         this.coin10Sync = coin10Synced && !this.coin10Prev;
         this.coin20Sync = coin20Synced && !this.coin20Prev;
         this.coin50Sync = coin50Synced && !this.coin50Prev;
         this.selectSync = selectSynced && !this.selectPrev;
+        this.itemIdSync = itemIdSynced; // ID is level triggered in sync
         
         // Store current values for next edge detection
         this.coin10Prev = coin10Synced;
@@ -155,23 +155,46 @@ class VendingMachineSimulator {
         const prevState = this.currentState;
         
         if (this.resetSignal) {
+            const oldCredit = this.credit;
             this.currentState = this.STATES.IDLE;
             this.nextState = this.STATES.IDLE;
             this.credit = 0;
             this.dispense = false;
             this.returnChange = false;
             this.resetSignal = false;
-            this.latchedCoinValue = 0;
-            this.latchedSelect = false;
             
             if (this.onStateChange) {
                 this.onStateChange(this.STATE_NAMES[this.currentState]);
             }
+            
+            if (oldCredit !== 0 && this.onCreditChange) {
+                this.onCreditChange(this.credit);
+            }
             return;
         }
         
-        // Update current state from next state
+        // Detect state changes for one-time triggers
+        this.stateJustChanged = prevState !== this.nextState;
         this.currentState = this.nextState;
+        
+        // Handle credit clearing when leaving RETURN_CHANGE or entering IDLE accurately
+        if (prevState === this.STATES.RETURN_CHANGE && this.currentState === this.STATES.IDLE) {
+            this.credit = 0;
+            if (this.onCreditChange) {
+                this.onCreditChange(this.credit);
+            }
+        }
+        
+        // Helper: Calculate Cost
+        // 0: Coffee (15), 1: Chips (20), 2: Chocolate (25), 3: Juice (30), 4: Milkshake (50)
+        switch(this.itemIdSync) {
+            case 0: this.selectedItemCost = 15; break;
+            case 1: this.selectedItemCost = 20; break;
+            case 2: this.selectedItemCost = 25; break;
+            case 3: this.selectedItemCost = 30; break;
+            case 4: this.selectedItemCost = 50; break;
+            default: this.selectedItemCost = 255;
+        }
         
         // Compute next state (combinational logic)
         this.computeNextState();
@@ -190,7 +213,7 @@ class VendingMachineSimulator {
             case this.STATES.IDLE:
                 if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
                     this.nextState = this.STATES.ACCEPT_COIN;
-                    // Latch the coin value here so it's available in the next state
+                    // Latch value
                     if (this.coin10Sync) this.latchedCoinValue = 10;
                     else if (this.coin20Sync) this.latchedCoinValue = 20;
                     else if (this.coin50Sync) this.latchedCoinValue = 50;
@@ -200,11 +223,12 @@ class VendingMachineSimulator {
                 break;
                 
             case this.STATES.ACCEPT_COIN:
-                // Calculate what credit WILL BE after this cycle's update
-                // We are in ACCEPT_COIN, so we know we are adding the latched coin value
+                // Check if current credit (updated previous cycle) is enough for Cheapest Item (15)
+                // Note: In Simulator, credit updates at end of cycle.
+                // Here we predict: Credit will be OldCredit + Value
                 let futureCredit = this.credit + this.latchedCoinValue;
                 
-                if (futureCredit >= this.ITEM_COST) {
+                if (futureCredit >= 15) {
                     this.nextState = this.STATES.WAIT_SELECTION;
                 } else {
                     this.nextState = this.STATES.IDLE;
@@ -212,17 +236,19 @@ class VendingMachineSimulator {
                 break;
                 
             case this.STATES.WAIT_SELECTION:
-                // Latch select signal if it occurs
                 if (this.selectSync) {
-                    this.latchedSelect = true;
-                }
-                
-                if (this.selectSync || this.latchedSelect) {
-                    this.nextState = this.STATES.DISPENSE_ITEM;
-                    this.latchedSelect = false; // Clear latch upon transition
-                } else if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
+                    // Check if sufficient credit for SELECTED item
+                    if (this.credit >= this.selectedItemCost) {
+                        this.nextState = this.STATES.DISPENSE_ITEM;
+                    } 
+                    // else stay in WAIT_SELECTION (or IDLE if strictly following Verilog logic default)
+                    // Verilog says: if select_detected -> check credit, else...
+                    // In Verilog if credit low, it stays in WAIT or goes IDLE depending on impl. 
+                    // Our FSM: if select detected & credit valid -> Dispense.
+                    // If credits low, do nothing (stay).
+                } 
+                else if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
                     this.nextState = this.STATES.ACCEPT_COIN;
-                    // Latch the coin value here too
                     if (this.coin10Sync) this.latchedCoinValue = 10;
                     else if (this.coin20Sync) this.latchedCoinValue = 20;
                     else if (this.coin50Sync) this.latchedCoinValue = 50;
@@ -232,7 +258,9 @@ class VendingMachineSimulator {
                 break;
                 
             case this.STATES.DISPENSE_ITEM:
-                if (this.credit > this.ITEM_COST) {
+                // If credit remains after deduction
+                // We must use CURRENT credit - Cost
+                if (this.credit > this.selectedItemCost) {
                     this.nextState = this.STATES.RETURN_CHANGE;
                 } else {
                     this.nextState = this.STATES.IDLE;
@@ -256,54 +284,45 @@ class VendingMachineSimulator {
         this.creditEnable = false;
         this.creditLoad = false;
         this.creditDecrement = false;
-        this.creditClear = false; // New control signal
         this.creditValue = 0;
         this.dispense = false;
         this.returnChange = false;
         
         switch (this.currentState) {
             case this.STATES.IDLE:
-                // No operations
                 break;
                 
             case this.STATES.ACCEPT_COIN:
                 this.creditEnable = true;
                 this.creditLoad = true;
-                this.creditValue = this.latchedCoinValue; // Use latched value
+                this.creditValue = this.latchedCoinValue; 
                 break;
                 
             case this.STATES.WAIT_SELECTION:
-                // Allow additional coin insertions
-                if (this.coin10Sync || this.coin20Sync || this.coin50Sync) {
-                    this.creditEnable = true;
-                    this.creditLoad = true;
-                    
-                    if (this.coin10Sync) this.creditValue = 10;
-                    else if (this.coin20Sync) this.creditValue = 20;
-                    else if (this.coin50Sync) this.creditValue = 50;
-                }
+                // Transition to ACCEPT_COIN will handle the credit loading
                 break;
                 
             case this.STATES.DISPENSE_ITEM:
                 this.dispense = true;
                 this.creditEnable = true;
                 this.creditDecrement = true;
+                this.creditValue = this.selectedItemCost; // Dynamic cost subtraction
                 
-                if (this.onDispense) {
+                // Only trigger callback on state entry
+                if (this.stateJustChanged && this.onDispense) {
                     this.onDispense();
                 }
                 break;
                 
-            case this.STATES.RETURN_CHANGE:
-                this.returnChange = true;
-                // Clear credit after returning change
-                this.creditEnable = true;
-                this.creditClear = true;
-                
-                if (this.onReturnChange) {
-                    this.onReturnChange(this.credit);
-                }
-                break;
+        case this.STATES.RETURN_CHANGE:
+            this.returnChange = true;
+            
+            // Only trigger callback on state entry
+            if (this.stateJustChanged && this.onReturnChange) {
+                // Return total credit as change
+                this.onReturnChange(this.credit);
+            }
+            break;
         }
     }
     
@@ -314,16 +333,15 @@ class VendingMachineSimulator {
         const prevCredit = this.credit;
         
         if (this.creditEnable) {
-            if (this.creditClear) {
-                // Clear credit (reset to 0)
-                this.credit = 0;
-            } else if (this.creditLoad) {
-                // Add coin value (with saturation)
+            if (this.creditLoad) {
+                // Add coin value
+                // In simulator we cheat slightly by setting credit=0 in ReturnChange above
+                // otherwise here:
                 this.credit = Math.min(255, this.credit + this.creditValue);
             } else if (this.creditDecrement) {
                 // Subtract item cost
-                if (this.credit >= this.ITEM_COST) {
-                    this.credit -= this.ITEM_COST;
+                if (this.credit >= this.creditValue) {
+                    this.credit -= this.creditValue;
                 }
             }
         }
@@ -352,7 +370,6 @@ class VendingMachineSimulator {
             returnChange: this.returnChange
         });
         
-        // Limit history size
         if (this.signalHistory.length > this.maxHistoryLength) {
             this.signalHistory.shift();
         }
@@ -361,31 +378,21 @@ class VendingMachineSimulator {
     // ========================================================================
     // Public Control Methods
     // ========================================================================
-    insertCoin10() {
-        this.coin10Raw = true;
-    }
+    insertCoin10() { this.coin10Raw = true; }
+    insertCoin20() { this.coin20Raw = true; }
+    insertCoin50() { this.coin50Raw = true; }
     
-    insertCoin20() {
-        this.coin20Raw = true;
-    }
-    
-    insertCoin50() {
-        this.coin50Raw = true;
-    }
-    
-    selectItem() {
-        this.selectRaw = true;
-    }
+    selectItem() { this.selectRaw = true; }
     
     reset() {
         this.resetSignal = true;
-        this.tick(); // Process reset immediately
+        this.tick();
     }
     
     start() {
         if (!this.running && !this.stepMode) {
             this.running = true;
-            this.clockInterval = setInterval(() => this.tick(), 500); // 2 Hz clock
+            this.clockInterval = setInterval(() => this.tick(), 500); 
         }
     }
     
@@ -412,17 +419,9 @@ class VendingMachineSimulator {
         }
     }
     
-    getStateName() {
-        return this.STATE_NAMES[this.currentState];
-    }
-    
-    getCredit() {
-        return this.credit;
-    }
-    
-    getSignalHistory() {
-        return this.signalHistory;
-    }
+    getStateName() { return this.STATE_NAMES[this.currentState]; }
+    getCredit() { return this.credit; }
+    getSignalHistory() { return this.signalHistory; }
 }
 
 // Export for use in other modules

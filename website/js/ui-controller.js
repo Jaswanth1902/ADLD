@@ -17,11 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Application State
     // ========================================================================
     const items = [
-        { name: 'Milkshake', cost: 15, icon: '🥤' },
+        { name: 'Coffee', cost: 15, icon: '☕' },
         { name: 'Chips', cost: 20, icon: '🍟' },
         { name: 'Chocolate', cost: 25, icon: '🍫' },
         { name: 'Juice', cost: 30, icon: '🧃' },
-        { name: 'Coffee', cost: 50, icon: '☕' }
+        { name: 'Milkshake', cost: 50, icon: '🥤' }
     ];
     
     let currentItemIndex = 0;
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextItemBtn = document.getElementById('next-item');
     const itemIconDisplay = document.getElementById('item-icon');
     const itemNameDisplay = document.getElementById('item-name');
-    const itemCostDisplay = document.querySelector('.item-cost .value');
+    const itemCostDisplay = document.getElementById('item-cost-value');
     
     const creditDisplay = document.getElementById('credit-value');
     const statusText = document.getElementById('status-text');
@@ -106,9 +106,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     btnReset.addEventListener('click', () => {
+        const refundAmount = simulator.getCredit();
         simulator.reset();
-        addLogEntry('System reset', true);
-        changeIndicator.textContent = '-';
+        
+        if (refundAmount > 0) {
+            addLogEntry(`↺ Refunded: ₹${refundAmount}`, false, true);
+            changeIndicator.textContent = `₹${refundAmount}`;
+            // Clear after delay like normal change
+            setTimeout(() => {
+                changeIndicator.textContent = '₹0';
+            }, 3000);
+        } else {
+            addLogEntry('System reset');
+            changeIndicator.textContent = '₹0';
+        }
+        
         resetItemAnimation();
         animateButton(btnReset);
     });
@@ -147,12 +159,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     simulator.onReturnChange = (change) => {
         changeIndicator.textContent = `₹${change}`;
-        addLogEntry(`✓ Change returned: ₹${change}`, false, true);
+        addLogEntry(`💰 Dispensing Change: ₹${change}`, false, true);
         
-        // Clear change display after 3 seconds
+        // Clear change display after 5 seconds for visibility
         setTimeout(() => {
-            changeIndicator.textContent = '-';
-        }, 3000);
+            // Only clear if not updated by another transaction/reset
+            if (changeIndicator.textContent === `₹${change}`) {
+                changeIndicator.textContent = '₹0';
+            }
+        }, 5000);
     };
     
     simulator.onClockTick = () => {
@@ -173,10 +188,11 @@ document.addEventListener('DOMContentLoaded', function() {
         itemNameDisplay.textContent = item.name;
         itemCostDisplay.textContent = `₹${item.cost}`;
         
-        // Update Simulator Cost
-        simulator.setItemCost(item.cost);
+        // Update Simulator with selected item ID
+        // The simulator will derive the cost from the ID, mimicking the FSM
+        simulator.setItemId(currentItemIndex);
         
-        // Update Button States (if credit is now sufficient for cheaper item)
+        // Update visual state of buttons based on new cost
         updateButtonStates();
         
         // visual feedback

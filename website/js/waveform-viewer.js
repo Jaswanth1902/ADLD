@@ -25,11 +25,13 @@ class WaveformViewer {
             clk: '#10b981',
             coin5: '#8b5cf6',
             coin10: '#f59e0b',
+            coin20: '#8b5cf6',
+            coin50: '#ec4899',
             select: '#3b82f6',
             dispense: '#ef4444',
-            returnChange: '#ec4899',
+            returnChange: '#fbbf24',
             state: '#06b6d4',
-            credit: '#fbbf24',
+            credit: '#10b981',
             grid: '#1e293b',
             text: '#94a3b8',
             high: '#10b981',
@@ -39,8 +41,9 @@ class WaveformViewer {
         // Signal definitions
         this.signals = [
             { name: 'clk', type: 'digital', color: this.colors.clk },
-            { name: 'coin5', type: 'digital', color: this.colors.coin5 },
             { name: 'coin10', type: 'digital', color: this.colors.coin10 },
+            { name: 'coin20', type: 'digital', color: this.colors.coin20 },
+            { name: 'coin50', type: 'digital', color: this.colors.coin50 },
             { name: 'select', type: 'digital', color: this.colors.select },
             { name: 'state', type: 'bus', color: this.colors.state },
             { name: 'credit', type: 'bus', color: this.colors.credit },
@@ -143,10 +146,12 @@ class WaveformViewer {
         switch (signalName) {
             case 'clk':
                 return data.clk;
-            case 'coin5':
-                return data.coin5;
             case 'coin10':
                 return data.coin10;
+            case 'coin20':
+                return data.coin20;
+            case 'coin50':
+                return data.coin50;
             case 'select':
                 return data.select;
             case 'dispense':

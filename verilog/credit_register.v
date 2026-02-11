@@ -42,10 +42,10 @@ module credit_register (
                     credit_out <= credit_out + credit_in;
             end
             else if (decrement) begin
-                // Decrement operation: Subtract item cost (₹15)
+                // Decrement operation: Subtract dynamic item cost
                 // Only decrement if sufficient credit exists
-                if (credit_out >= 8'd15)
-                    credit_out <= credit_out - 8'd15;
+                if (credit_out >= credit_in)
+                    credit_out <= credit_out - credit_in;
             end
             // If neither load nor decrement, hold current value
         end

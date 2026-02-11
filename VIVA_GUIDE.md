@@ -52,17 +52,17 @@ This guide covers typical viva questions for the Microcontroller-Based Vending M
 
 ## FSM & State Machine Questions
 
-### Q4: Explain the state transition from IDLE to DISPENSE_ITEM for exact payment (₹15).
+### Q4: Explain the state transition from IDLE to DISPENSE_ITEM for a purchase.
 
 **Answer:**
-> "For exact ₹15 payment using ₹5 and ₹10 coins, the state sequence is:
+> "For a purchase of Chips (₹20) using two ₹10 coins:
 >
-> 1. **IDLE** → User inserts ₹5 coin
-> 2. **ACCEPT_COIN** → FSM enables credit register, loads ₹5, credit = 5
-> 3. **IDLE** → Credit (5) < Item Cost (15), insufficient, return to IDLE
-> 4. **→ ACCEPT_COIN** → User inserts ₹10, credit += 10 = 15
-> 5. **WAIT_SELECTION** → Credit (15) ≥ Item Cost (15), wait for selection
-> 6. **DISPENSE_ITEM** → User presses select, dispense = HIGH, credit -= 15 = 0
+> 1. **IDLE** → User inserts ₹10 coin
+> 2. **ACCEPT_COIN** → FSM enables credit register, loads ₹10, credit = 10
+> 3. **IDLE** → Credit (10) < Min Cost (15), return to IDLE
+> 4. **→ ACCEPT_COIN** → User inserts second ₹10, credit += 10 = 20
+> 5. **WAIT_SELECTION** → Credit (20) ≥ Chips Cost (20), wait for selection
+> 6. **DISPENSE_ITEM** → User presses select, dispense = HIGH, credit -= 20 = 0
 > 7. **IDLE** → Credit equals item cost (no change), return to IDLE
 >
 > Each transition is clock-edge triggered and synchronous."
@@ -74,12 +74,12 @@ This guide covers typical viva questions for the Microcontroller-Based Vending M
 **Answer:**
 > "If credit exceeds item cost, the FSM transitions through the RETURN_CHANGE state:
 >
-> - **DISPENSE_ITEM** → Credit is decremented by ₹15 (item cost)
+> - **DISPENSE_ITEM** → Credit is decremented by the specific item cost (e.g., ₹15 for Coffee)
 > - Check: if remaining credit > 0, transition to **RETURN_CHANGE**
 > - **RETURN_CHANGE** → `return_change` signal goes HIGH, indicating change mechanism should activate
 > - **IDLE** → Return to initial state
 >
-> For example, ₹25 credit: after dispensing, ₹10 remains, RETURN_CHANGE activates, then returns to IDLE. In a real system, this would trigger a change dispenser mechanism."
+> For example, ₹20 credit: after buying Coffee (₹15), ₹5 remains, RETURN_CHANGE activates, then returns to IDLE. In a real system, this would trigger a change dispenser mechanism."
 
 ---
 
@@ -187,10 +187,10 @@ This guide covers typical viva questions for the Microcontroller-Based Vending M
 >     // FSM logic
 >     switch(currentState) {
 >         case IDLE:
->             if(coin5 || coin10) currentState = ACCEPT_COIN;
+>             if(coin10 || coin20 || coin50) currentState = ACCEPT_COIN;
 >             break;
 >         case ACCEPT_COIN:
->             credit += (coin5 ? 5 : 10);
+>             credit += (coin10 ? 10 : (coin20 ? 20 : 50));
 >             currentState = (credit >= 15) ? WAIT_SELECTION : IDLE;
 >             break;
 >         // ... etc

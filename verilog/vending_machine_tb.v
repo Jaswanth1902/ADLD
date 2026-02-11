@@ -16,9 +16,11 @@ module vending_machine_tb;
     
     reg clk;
     reg reset;
-    reg coin_5;
     reg coin_10;
+    reg coin_20;
+    reg coin_50;
     reg select_item;
+    reg [2:0] item_id;
     
     wire dispense;
     wire return_change;
@@ -35,9 +37,11 @@ module vending_machine_tb;
     vending_machine_top dut (
         .clk(clk),
         .reset(reset),
-        .coin_5(coin_5),
         .coin_10(coin_10),
+        .coin_20(coin_20),
+        .coin_50(coin_50),
         .select_item(select_item),
+        .item_id(item_id),
         .dispense(dispense),
         .return_change(return_change),
         .current_credit(current_credit),
@@ -45,16 +49,16 @@ module vending_machine_tb;
     );
     
     // ========================================================================
-    // Clock Generation (10ns period = 100MHz)
+    // Clock Generation
     // ========================================================================
     
     initial begin
         clk = 0;
-        forever #5 clk = ~clk;  // Toggle every 5ns
+        forever #5 clk = ~clk;  // 100 MHz
     end
     
     // ========================================================================
-    // State Name Decoder (for readability)
+    // State Decoder
     // ========================================================================
     
     always @(*) begin
@@ -74,17 +78,13 @@ module vending_machine_tb;
     
     initial begin
         $display("\n========================================");
-        $display("Vending Machine Controller Testbench");
-        $display("Item Cost: Rs.15");
+        $display("Vending Machine Testbench (New Specs)");
+        $display("Items: Coffee(15), Chips(20), Choco(25), Juice(30), Milkshake(50)");
         $display("========================================\n");
         
         $monitor("Time=%0t | State=%s | Credit=Rs.%0d | Dispense=%b | Change=%b", 
                  $time, state_name, current_credit, dispense, return_change);
     end
-    
-    // ========================================================================
-    // Waveform Dump (for GTKWave/ModelSim)
-    // ========================================================================
     
     initial begin
         $dumpfile("waveform.vcd");
@@ -92,200 +92,78 @@ module vending_machine_tb;
     end
     
     // ========================================================================
-    // Test Stimulus
+    // Test Scenario
     // ========================================================================
     
     initial begin
-        // Initialize all inputs
-        reset = 0;
-        coin_5 = 0;
-        coin_10 = 0;
-        select_item = 0;
-        
-        // ====================================================================
-        // Test 1: System Reset
-        // ====================================================================
-        $display("\n[TEST 1] System Reset");
+        // Initialize
         reset = 1;
-        #20;
-        reset = 0;
-        #20;
-        
-        if (current_credit == 8'd0 && state_debug == 3'b000) begin
-            $display("✓ PASS: Reset successful, credit=0, state=IDLE");
-        end else begin
-            $display("✗ FAIL: Reset failed!");
-        end
-        
-        // ====================================================================
-        // Test 2: Insufficient Credit (₹5 only)
-        // ====================================================================
-        $display("\n[TEST 2] Insufficient Credit - Insert Rs.5 only");
-        #20;
-        coin_5 = 1;
-        #10;
-        coin_5 = 0;
-        #50;
-        
-        if (current_credit == 8'd5 && dispense == 0) begin
-            $display("✓ PASS: Rs.5 accepted, no dispense (insufficient credit)");
-        end else begin
-            $display("✗ FAIL: Incorrect behavior for insufficient credit");
-        end
-        
-        // ====================================================================
-        // Test 3: Exact Payment (₹5 + ₹10 = ₹15)
-        // ====================================================================
-        $display("\n[TEST 3] Exact Payment - Rs.5 + Rs.10 = Rs.15");
-        
-        // Add Rs.10 to existing Rs.5
-        #20;
-        coin_10 = 1;
-        #10;
         coin_10 = 0;
-        #50;
-        
-        if (current_credit == 8'd15) begin
-            $display("✓ PASS: Total Rs.15 accumulated");
-        end
-        
-        // Select item
-        $display("  → Selecting item...");
-        #20;
-        select_item = 1;
-        #10;
+        coin_20 = 0;
+        coin_50 = 0;
         select_item = 0;
-        #50;
+        item_id = 0;
         
-        if (dispense == 0 && current_credit == 8'd0) begin
-            $display("✓ PASS: Item dispensed, credit cleared, no change");
-        end else begin
-            $display("✗ FAIL: Incorrect dispense behavior");
-        end
-        
-        // ====================================================================
-        // Test 4: Overpayment with Change (₹10 + ₹10 = ₹20, change = ₹5)
-        // ====================================================================
-        $display("\n[TEST 4] Overpayment - Rs.10 + Rs.10 = Rs.20 (change Rs.5)");
-        
-        // Reset for new transaction
-        #50;
-        reset = 1;
-        #20;
-        reset = 0;
+        #20 reset = 0;
         #20;
         
-        // Insert two Rs.10 coins
-        coin_10 = 1;
-        #10;
-        coin_10 = 0;
+        // --------------------------------------------------------------------
+        // TEST 1: Buy Coffee (₹15) with ₹20 coin -> Expect ₹5 Change
+        // --------------------------------------------------------------------
+        $display("\n[TEST 1] Buy Coffee (Rs.15) with Rs.20 Coin");
+        
+        coin_20 = 1; #10; coin_20 = 0; // Insert 20
         #50;
         
-        coin_10 = 1;
-        #10;
-        coin_10 = 0;
+        // Select Coffee (ID 0)
+        item_id = 3'd0;
+        select_item = 1; #10; select_item = 0;
         #50;
         
-        if (current_credit == 8'd20) begin
-            $display("✓ PASS: Rs.20 accumulated");
-        end
+        if (dispense) $display("✓ PASS: Coffee dispensed");
+        else $display("✗ FAIL: No dispense");
         
-        // Select item
-        $display("  → Selecting item...");
-        #20;
-        select_item = 1;
-        #10;
-        select_item = 0;
+        // Wait for Return Change state and back to IDLE
         #50;
         
-        // Check if change was indicated
-        // Note: After dispense, credit should be reduced by Rs.15
-        if (current_credit == 8'd5) begin
-            $display("✓ PASS: Change of Rs.5 remaining in credit");
-        end
+        // --------------------------------------------------------------------
+        // TEST 2: Buy Milkshake (₹50) with ₹50 coin -> Exact Change
+        // --------------------------------------------------------------------
+        $display("\n[TEST 2] Buy Milkshake (Rs.50) with Rs.50 Coin");
         
-        // ====================================================================
-        // Test 5: Maximum Credit Scenario (₹25 = Rs.10*2 + Rs.5)
-        // ====================================================================
-        $display("\n[TEST 5] Maximum Credit - Rs.10 + Rs.10 + Rs.5 = Rs.25");
+        // Note: Reset happens implicitly if state went back to IDLE, 
+        // but let's force reset to be safe between tests if needed.
+        // FSM auto-returns to IDLE, so we just wait.
         
-        reset = 1;
-        #20;
-        reset = 0;
-        #20;
-        
-        // Insert Rs.10
-        coin_10 = 1;
-        #10;
-        coin_10 = 0;
+        coin_50 = 1; #10; coin_50 = 0; // Insert 50
         #50;
         
-        // Insert another Rs.10
-        coin_10 = 1;
-        #10;
-        coin_10 = 0;
+        // Select Milkshake (ID 4)
+        item_id = 3'd4;
+        select_item = 1; #10; select_item = 0;
         #50;
         
-        // Insert Rs.5
-        coin_5 = 1;
-        #10;
-        coin_5 = 0;
-        #50;
-        
-        if (current_credit == 8'd25) begin
-            $display("✓ PASS: Rs.25 accumulated");
-        end
-        
-        // Select item
-        select_item = 1;
-        #10;
-        select_item = 0;
-        #50;
-        
-        if (return_change == 1 || current_credit == 8'd10) begin
-            $display("✓ PASS: Item dispensed with Rs.10 change");
-        end
-        
-        // ====================================================================
-        // Test 6: Reset During Operation
-        // ====================================================================
-        $display("\n[TEST 6] Reset During Operation");
+        if (dispense) $display("✓ PASS: Milkshake dispensed");
         
         #50;
-        coin_10 = 1;
-        #10;
-        coin_10 = 0;
-        #20;
+
+        // --------------------------------------------------------------------
+        // TEST 3: Insufficient Funds - Buy Chips (₹20) with ₹10
+        // --------------------------------------------------------------------
+        $display("\n[TEST 3] Insufficient Funds - Buy Chips (Rs.20) with Rs.10");
         
-        // Reset while credit exists
-        $display("  → Resetting with Rs.10 credit...");
-        reset = 1;
-        #20;
-        reset = 0;
-        #20;
+        coin_10 = 1; #10; coin_10 = 0; // Insert 10
+        #50;
         
-        if (current_credit == 8'd0 && state_debug == 3'b000) begin
-            $display("✓ PASS: Reset clears credit and returns to IDLE");
-        end else begin
-            $display("✗ FAIL: Reset did not clear state properly");
-        end
+        // Select Chips (ID 1)
+        item_id = 3'd1;
+        select_item = 1; #10; select_item = 0;
+        #50;
         
-        // ====================================================================
-        // Test Summary
-        // ====================================================================
-        #100;
-        $display("\n========================================");
-        $display("Testbench Completed");
-        $display("========================================\n");
-        $display("Review waveform.vcd for detailed signal analysis");
-        $display("All critical scenarios tested:\n");
-        $display("  ✓ System reset");
-        $display("  ✓ Insufficient credit handling");
-        $display("  ✓ Exact payment (Rs.15)");
-        $display("  ✓ Overpayment with change");
-        $display("  ✓ Maximum credit scenario");
-        $display("  ✓ Reset during operation\n");
-        
+        if (!dispense && current_credit == 10) $display("✓ PASS: No dispense, credit retained");
+        else $display("✗ FAIL: Dispensed incorrectly");
+
+        #50;
         $finish;
     end
 

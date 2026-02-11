@@ -47,19 +47,20 @@
 
 ### Demo Scenario 1: Insufficient Credit (20 seconds)
 
-**Action:** Click ₹5 coin button.
+**Action:** Click ₹10 coin button.
 
-> "I'm inserting a ₹5 coin... Notice:
+> "I'm inserting a ₹20 coin... Notice:
 > - FSM transitions from IDLE to ACCEPT_COIN
-> - Credit updates to ₹5
-> - FSM returns to IDLE because credit is less than item cost of ₹15
-> - The waveform shows the coin_5 pulse and credit value change"
+> - Credit updates to ₹20
+> - I'll navigate to 'Milkshake' which costs ₹50.
+> - FSM returns to IDLE because credit is less than Milkshake cost.
+> - The waveform shows the coin_20 pulse and credit value change"
 
 ### Demo Scenario 2: Exact Payment (40 seconds)
 
-**Action:** Click ₹10 coin button.
+**Action:** Click ₹10 coin button, then navigate to Coffee.
 
-> "Adding ₹10... Credit is now ₹15, exactly the item cost.
+> "Adding ₹10... then another ₹10. Total credit is ₹20. I'll select 'Chips' which costs exactly ₹20.
 > - FSM transitions to WAIT_SELECTION - see the state diagram highlight
 > - Select button is now enabled"
 
@@ -69,23 +70,23 @@
 > - FSM goes to DISPENSE_ITEM state
 > - Dispense signal goes HIGH - watch the waveform
 > - Item animates downward
-> - Credit is decremented by ₹15, back to zero
+> - Credit is decremented by ₹20, back to zero
 > - FSM returns to IDLE"
 
 ### Demo Scenario 3: Change Return (40 seconds)
 
-**Action:** Click ₹10 twice, then ₹5.
+**Action:** Click ₹50 coin button.
 
-> "Let me show overpayment. Inserting ₹10... ₹10 again... and ₹5.
-> - Total credit: ₹25"
+> "Let me show overpayment. Inserting ₹50...
+> - Total credit: ₹50. I'll select 'Chocolate' which costs ₹25."
 
 **Action:** Click SELECT ITEM.
 
 > "Now selecting...
 > - Item dispensed
-> - Credit reduced by ₹15 to ₹10
+> - Credit reduced by ₹25 to ₹25
 > - FSM transitions to RETURN_CHANGE state
-> - Change return indicator shows ₹10
+> - Change return indicator shows ₹25
 > - This simulates the change dispensing mechanism"
 
 ### Reset Demonstration (20 seconds)
@@ -102,19 +103,19 @@
 
 > "For detailed demonstration, I'll enable step-by-step mode. This allows clock-by-clock execution."
 
-**Action:** Click ₹5 button, then click Next Cycle button several times.
+**Action:** Click ₹10 button, then click Next Cycle button several times.
 
 > "Each click advances one clock cycle. Watch carefully:
 >
-> **Cycle 1:** Clock rises, io_interface synchronizes the coin_5 input
+> **Cycle 1:** Clock rises, io_interface synchronizes the coin_10 input
 >
 > **Cycle 2:** FSM detects coin pulse, transitions to ACCEPT_COIN state - see the state diagram update
 >
 > **Cycle 3:** Control signals activate - credit_enable and credit_load go HIGH
 >
-> **Cycle 4:** Credit register adds ₹5, credit updates to 5
+> **Cycle 4:** Credit register adds ₹10, credit updates to 10
 >
-> **Cycle 5:** FSM checks: credit (5) less than item cost (15), returns to IDLE
+> **Cycle 5:** FSM checks: credit (10) less than minimum item cost (15), returns to IDLE
 >
 > This demonstrates the synchronous nature of the design - all transitions happen on clock edges, exactly like firmware running on a microcontroller."
 
@@ -128,7 +129,7 @@
 
 > "The waveform viewer shows all signals in real-time:
 > - Clock signal (green square wave)
-> - Input pulses: coin_5, coin_10, select
+> - Input pulses: coin_10, coin_20, coin_50, select
 > - FSM state (as bus signal with state names)
 > - Credit value (8-bit bus)
 > - Output signals: dispense and return_change
@@ -167,7 +168,7 @@
 1. Open `website/index.html` in Chrome/Firefox
 2. Test all buttons to ensure simulator is working
 3. Reset the system (click RESET)
-4. Have keyboard shortcuts ready: `5`, `1`, `S`, `R`
+4. Have keyboard shortcuts ready: `1`, `2`, `5`, `S`, `R`
 
 ### During Presentation
 - **Speak confidently** - you know the system inside out

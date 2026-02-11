@@ -58,7 +58,7 @@
                             </div>
                             <div class="item-cost">
                                 <span class="label">ITEM COST</span>
-                                <span class="value">₹15</span>
+                                <span class="value" id="item-cost-value">₹15</span>
                             </div>
                         </div>
                         
@@ -133,37 +133,37 @@
                         <!-- ACCEPT_COIN -> IDLE (Insufficient Credit) -->
                         <g class="transition-group">
                             <path d="M 150 150 Q 150 100 270 75" class="transition" marker-end="url(#arrowhead)"/>
-                            <text x="180" y="120" class="transition-label">Credit < 15</text>
+                            <text x="180" y="120" class="transition-label">Insufficient Credit</text>
                         </g>
 
                         <!-- ACCEPT_COIN -> WAIT_SELECTION (Sufficient Credit) -->
                         <g class="transition-group">
                             <path d="M 150 150 L 450 150" class="transition" marker-end="url(#arrowhead)"/>
-                            <text x="300" y="140" class="transition-label">Credit ≥ 15</text>
+                            <text x="300" y="140" class="transition-label">Credit ≥ Min Cost</text>
                         </g>
 
                         <!-- WAIT_SELECTION -> ACCEPT_COIN (Add more money) -->
                         <g class="transition-group">
                             <path d="M 450 150 Q 300 180 150 150" class="transition" marker-end="url(#arrowhead)"/>
-                            <text x="300" y="175" class="transition-label">Coin detected</text>
+                            <text x="300" y="175" class="transition-label">Deposit Coin</text>
                         </g>
 
                         <!-- WAIT_SELECTION -> DISPENSE_ITEM (Select) -->
                         <g class="transition-group">
                             <path d="M 450 150 Q 450 300 300 300" class="transition" marker-end="url(#arrowhead)"/>
-                            <text x="430" y="240" class="transition-label">Select pressed</text>
+                            <text x="430" y="240" class="transition-label">Item Selected</text>
                         </g>
 
                         <!-- DISPENSE_ITEM -> IDLE (Exact Payment) -->
                         <g class="transition-group">
                            <path d="M 300 300 L 300 70" class="transition" marker-end="url(#arrowhead)"/>
-                           <text x="260" y="200" class="transition-label">Credit = 15</text>
+                           <text x="260" y="200" class="transition-label">Exact Payment</text>
                         </g>
 
                         <!-- DISPENSE_ITEM -> RETURN_CHANGE (Overpayment) -->
                         <g class="transition-group">
                             <path d="M 300 300 L 450 300" class="transition" marker-end="url(#arrowhead)"/>
-                            <text x="375" y="290" class="transition-label">Credit > 15</text>
+                            <text x="375" y="290" class="transition-label">Overpayment</text>
                         </g>
 
                         <!-- RETURN_CHANGE -> IDLE (Done) -->
@@ -218,11 +218,12 @@
                 <canvas id="waveform-canvas" width="1200" height="300"></canvas>
                 <div class="waveform-legend">
                     <span><span class="legend-color" style="background: #10b981;"></span> clk</span>
-                    <span><span class="legend-color" style="background: #8b5cf6;"></span> coin_5</span>
                     <span><span class="legend-color" style="background: #f59e0b;"></span> coin_10</span>
+                    <span><span class="legend-color" style="background: #8b5cf6;"></span> coin_20</span>
+                    <span><span class="legend-color" style="background: #ec4899;"></span> coin_50</span>
                     <span><span class="legend-color" style="background: #3b82f6;"></span> select</span>
                     <span><span class="legend-color" style="background: #ef4444;"></span> dispense</span>
-                    <span><span class="legend-color" style="background: #ec4899;"></span> change</span>
+                    <span><span class="legend-color" style="background: #fbbf24;"></span> change</span>
                 </div>
             </div>
         </div>
@@ -369,12 +370,12 @@ end
 always @(*) begin
     case (current_state)
         IDLE: begin
-            if (coin_5_detected || coin_10_detected)
+            if (coin_10_sync || coin_20_sync || coin_50_sync)
                 next_state = ACCEPT_COIN;
         end
         
         ACCEPT_COIN: begin
-            if (current_credit >= ITEM_COST)
+            if (current_credit >= 15) // Min cost
                 next_state = WAIT_SELECTION;
             else
                 next_state = IDLE;
@@ -383,7 +384,7 @@ always @(*) begin
         WAIT_SELECTION: begin
             if (select_detected)
                 next_state = DISPENSE_ITEM;
-            else if (coin_5_detected || coin_10_detected)
+            else if (coin_10_sync || coin_20_sync || coin_50_sync)
                 next_state = ACCEPT_COIN;
         end
         // ... more states
@@ -404,9 +405,9 @@ end</code></pre>
                 credit_out <= credit_out + credit_in;
         end
         else if (decrement) begin
-            // Subtract item cost
-            if (credit_out >= 8'd15)
-                credit_out <= credit_out - 8'd15;
+            // Subtract dynamic item cost
+            if (credit_out >= credit_in)
+                credit_out <= credit_out - credit_in;
         end
     end
 end</code></pre>

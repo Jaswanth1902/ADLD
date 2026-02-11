@@ -11,17 +11,19 @@
 **Try the Interactive Demo:**
 1. Open `website/index.html` in any modern web browser
 2. Click "Try It Live" or scroll to the Interactive Demonstration section
-3. Use the coin buttons to insert ₹5 or ₹10
-4. Click "SELECT ITEM" when you have ₹15 or more
-5. Watch the FSM transitions, waveforms, and animations in real-time!
+3. Use the coin buttons (₹10, ₹20, ₹50) to add credit
+4. Scroll through items (Coffee, Chips, Chocolate, Juice, Milkshake)
+5. Click "SELECT ITEM" when you have sufficient credit
+6. Watch the FSM transitions, waveforms, and animations in real-time!
 
 **Keyboard Shortcuts for Demo:**
-- `5` - Insert ₹5 coin
 - `1` - Insert ₹10 coin
+- `2` - Insert ₹20 coin
+- `5` - Insert ₹50 coin
 - `S` - Select item
 - `R` - Reset system
+- `Arrows` - Navigate items
 - `D` - Run auto demo
-- `Space` - Next cycle (in step mode)
 
 ---
 
@@ -30,8 +32,13 @@
 This project simulates the internal control logic of a microcontroller-based vending machine using Verilog HDL. The FSM represents firmware behavior, while registers and I/O signals abstract internal microcontroller resources.
 
 ### System Specifications
-- **Item Cost:** ₹15 per item
-- **Accepted Coins:** ₹5 and ₹10
+- **Accepted Coins:** ₹10, ₹20, ₹50
+- **Menu & Pricing:**
+    - **Coffee:** ₹15
+    - **Chips:** ₹20
+    - **Chocolate:** ₹25
+    - **Juice:** ₹30
+    - **Milkshake:** ₹50
 - **FSM States:** 5 states (IDLE, ACCEPT_COIN, WAIT_SELECTION, DISPENSE_ITEM, RETURN_CHANGE)
 - **Architecture:** Modular design with separate control and datapath units
 - **Synchronous Design:** All operations clocked
@@ -43,11 +50,11 @@ This project simulates the internal control logic of a microcontroller-based ven
 ```
 ADLD/
 ├── verilog/                          # Verilog HDL Source Files
-│   ├── credit_register.v             # 8-bit credit storage register
-│   ├── io_interface.v                # GPIO abstraction with synchronization
-│   ├── control_fsm.v                 # 5-state FSM control unit
+│   ├── credit_register.v             # 8-bit credit storage register (Dynamic subtraction)
+│   ├── io_interface.v                # GPIO abstraction with synchronization (8 inputs)
+│   ├── control_fsm.v                 # 5-state FSM control unit (Item logic)
 │   ├── vending_machine_top.v         # Top-level integration
-│   └── vending_machine_tb.v          # Comprehensive testbench
+│   └── vending_machine_tb.v          # Comprehensive testbench (New scenarios)
 │
 ├── website/                          # Interactive Demo Website
 │   ├── index.html                    # Main HTML structure
@@ -80,7 +87,7 @@ choco install verilog gtkwave
 # http://gtkwave.sourceforge.net/  (GTKWave)
 ```
 
-###Running Simulation
+### Running Simulation
 ```bash
 cd verilog
 
@@ -95,24 +102,20 @@ gtkwave waveform.vcd
 ```
 
 ### Expected Output
-```
+```text
 ========================================
-Vending Machine Controller Testbench
-Item Cost: Rs.15
+Vending Machine Testbench (New Specs)
+Items: Coffee(15), Chips(20), Choco(25), Juice(30), Milkshake(50)
 ========================================
 
-[TEST 1] System Reset
-✓ PASS: Reset successful, credit=0, state=IDLE
+[TEST 1] Buy Coffee (Rs.15) with Rs.20 Coin
+Time=65 | State=ACCEPT_COIN | Credit=Rs.20 | Dispense=0 | Change=0
+Time=125 | State=WAIT_SELECTION | Credit=Rs.20 | Dispense=0 | Change=0
+Time=135 | State=DISPENSE_ITEM | Credit=Rs.15 | Dispense=1 | Change=0
+✓ PASS: Coffee dispensed
 
-[TEST 2] Insufficient Credit - Insert Rs.5 only
-✓ PASS: Rs.5 accepted, no dispense (insufficient credit)
-
-[TEST 3] Exact Payment - Rs.5 + Rs.10 = Rs.15
-✓ PASS: Total Rs.15 accumulated
-  → Selecting item...
-✓ PASS: Item dispensed, credit cleared, no change
-
-... [more tests]
+[TEST 2] Buy Milkshake (Rs.50) with Rs.50 Coin
+...
 ```
 
 ---
