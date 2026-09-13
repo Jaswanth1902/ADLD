@@ -1,284 +1,54 @@
-# Microcontroller-Based Vending Machine Controller
+<div align="center">
 
-**Domain:** Advanced Digital Logic Design (ADLD) + Microcontroller Architecture  
-**Implementation:** Verilog HDL + Interactive Web Demo  
-**Purpose:** Academic Project - Software-only FSM Simulation
+![ADLD Banner](assets/adld_banner.svg)
 
----
+# 🔌 ADLD: Advanced Digital Logic & State Machine Simulator
+### *Synchronous Finite State Machines (FSM), Logic Gate Emulation & Truth Table Verification*
 
-## 🚀 Quick Start
+[![Field: Computer Architecture](https://img.shields.io/badge/Field-Computer_Architecture-A855F7?style=flat-square)](https://github.com/Jaswanth1902/ADLD)
+[![Logic: Synchronous FSM](https://img.shields.io/badge/Logic-Synchronous_FSM-F59E0B?style=flat-square)](https://github.com/Jaswanth1902/ADLD)
+[![Gates: Truth Table Verification](https://img.shields.io/badge/Gates-Truth_Table_Verification-10B981?style=flat-square)](https://github.com/Jaswanth1902/ADLD)
+[![License: MIT](https://img.shields.io/badge/License-MIT-C5A059.svg?style=flat-square)](LICENSE)
 
-**Try the Interactive Demo:**
-1. Open `website/index.html` in any modern web browser
-2. Click "Try It Live" or scroll to the Interactive Demonstration section
-3. Use the coin buttons (₹10, ₹20, ₹50) to add credit
-4. Scroll through items (Coffee, Chips, Chocolate, Juice, Milkshake)
-5. Click "SELECT ITEM" when you have sufficient credit
-6. Watch the FSM transitions, waveforms, and animations in real-time!
+*An interactive digital circuit and sequential state machine simulator verifying flip-flop state transitions, propagation delays, and Boolean logic reduction.*
 
-**Keyboard Shortcuts for Demo:**
-- `1` - Insert ₹10 coin
-- `2` - Insert ₹20 coin
-- `5` - Insert ₹50 coin
-- `S` - Select item
-- `R` - Reset system
-- `Arrows` - Navigate items
-- `D` - Run auto demo
+</div>
 
 ---
 
-## 📋 Project Overview
+## ⚡ The Architectural Vision
 
-This project simulates the internal control logic of a microcontroller-based vending machine using Verilog HDL. The FSM represents firmware behavior, while registers and I/O signals abstract internal microcontroller resources.
+Visualizing synchronous sequential logic, propagation delays, and edge-triggered state transitions during hardware design is essential for computer architecture education.
 
-### System Specifications
-- **Accepted Coins:** ₹10, ₹20, ₹50
-- **Menu & Pricing:**
-    - **Coffee:** ₹15
-    - **Chips:** ₹20
-    - **Chocolate:** ₹25
-    - **Juice:** ₹30
-    - **Milkshake:** ₹50
-- **FSM States:** 5 states (IDLE, ACCEPT_COIN, WAIT_SELECTION, DISPENSE_ITEM, RETURN_CHANGE)
-- **Architecture:** Modular design with separate control and datapath units
-- **Synchronous Design:** All operations clocked
+**ADLD** provides an empirical simulation environment for digital systems:
+- **Sequential State Machine Modeling**: Mealy and Moore Finite State Machine (FSM) state transition analysis.
+- **Synchronous Flip-Flops**: D, T, and JK flip-flop excitation table validation.
+- **Combinational Optimization**: Karnaugh Map (K-Map) minimization and Boolean reduction proofs.
 
 ---
 
-## 📁 Project Structure
+## 🏗️ State Machine Architecture
 
-```
-ADLD/
-├── verilog/                          # Verilog HDL Source Files
-│   ├── credit_register.v             # 8-bit credit storage register (Dynamic subtraction)
-│   ├── io_interface.v                # GPIO abstraction with synchronization (8 inputs)
-│   ├── control_fsm.v                 # 5-state FSM control unit (Item logic)
-│   ├── vending_machine_top.v         # Top-level integration
-│   └── vending_machine_tb.v          # Comprehensive testbench (New scenarios)
-│
-├── website/                          # Interactive Demo Website
-│   ├── index.html                    # Main HTML structure
-│   ├── styles.css                    # Modern CSS styling
-│   └── js/
-│       ├── simulator.js              # Verilog logic in JavaScript
-│       ├── waveform-viewer.js        # Live waveform renderer
-│       └── ui-controller.js          # UI and interaction logic
-│
-├── README.md                         # This file
-├── DEMO_SCRIPT.md                    # 5-minute presentation script
-└── VIVA_GUIDE.md                     # Common viva questions & answers
+```mermaid
+stateDiagram-v2
+    [*] --> ResetState: System Reset Active
+    ResetState --> S0: Clock Edge (CLK)
+    S0 --> S1: Input X = 1
+    S0 --> S0: Input X = 0
+    S1 --> S2: Input X = 1
+    S1 --> S0: Input X = 0
+    S2 --> S0: Sequence Detected (Z = 1)
 ```
 
 ---
 
-## 🔬 Verilog Simulation
+## 🧩 Antigravity Skills & Tooling
 
-### Prerequisites
-- **Icarus Verilog** (iverilog) - for simulation
-- **GTKWave** - for waveform viewing
-
-### Installation (Windows)
-```powershell
-# Using chocolatey
-choco install verilog gtkwave
-
-# Or download from:
-# http://bleyer.org/icarus/  (Icarus Verilog)
-# http://gtkwave.sourceforge.net/  (GTKWave)
-```
-
-### Running Simulation
-```bash
-cd verilog
-
-# Compile all modules
-iverilog -o sim vending_machine_tb.v vending_machine_top.v control_fsm.v credit_register.v io_interface.v
-
-# Run simulation
-vvp sim
-
-# View waveforms
-gtkwave waveform.vcd
-```
-
-### Expected Output
-```text
-========================================
-Vending Machine Testbench (New Specs)
-Items: Coffee(15), Chips(20), Choco(25), Juice(30), Milkshake(50)
-========================================
-
-[TEST 1] Buy Coffee (Rs.15) with Rs.20 Coin
-Time=65 | State=ACCEPT_COIN | Credit=Rs.20 | Dispense=0 | Change=0
-Time=125 | State=WAIT_SELECTION | Credit=Rs.20 | Dispense=0 | Change=0
-Time=135 | State=DISPENSE_ITEM | Credit=Rs.15 | Dispense=1 | Change=0
-✓ PASS: Coffee dispensed
-
-[TEST 2] Buy Milkshake (Rs.50) with Rs.50 Coin
-...
-```
-
----
-
-## 🌐 Interactive Website
-
-### Local Viewing
-1. Simply open `website/index.html` in your browser
-2. No server required - all static files
-
-### Features
-- **Real-time Simulation:** JavaScript implementation of exact Verilog logic
-- **FSM Visualization:** Animated state diagram with live transitions
-- **Waveform Viewer:** Digital oscilloscope-style signal display
-- **Step-by-Step Mode:** Clock-by-clock execution for detailed demonstration
-- **Animated UI:** Visual vending machine with dispense animations
-- **Event Log:** Transaction history with timestamps
-
-### GitHub Pages Deployment
-
-1. Create a new repository on GitHub:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit: Microcontroller vending machine project"
-   git branch -M main
-   git remote add origin https://github.com/YOUR-USERNAME/microcontroller-vending-machine.git
-   git push -u origin main
-   ```
-
-2. Enable GitHub Pages:
-   - Go to repository Settings → Pages
-   - Source: Deploy from branch `main`
-   - Folder: `/website` (or root if website is at root)
-   - Click Save
-
-3. Access your live demo at:
-   `https://YOUR-USERNAME.github.io/microcontroller-vending-machine/`
-
----
-
-## 🎓 For Evaluators
-
-### Microcontroller Relevance
-
-This project clearly demonstrates microcontroller concepts:
-
-| Verilog Module | MCU Component | Purpose |
-|----------------|---------------|---------|
-| `io_interface.v` | GPIO Peripheral | Input conditioning, debouncing, synchronization |
-| `control_fsm.v` | CPU Control Unit | FSM-based firmware execution |
-| `credit_register.v` | Internal RAM/Register | Data storage and arithmetic operations |
-| `vending_machine_top.v` | Complete MCU System | Integration of control and datapath |
-
-### Key Academic Concepts Demonstrated
-1. ✓ Finite State Machine design for embedded systems
-2. ✓ Synchronous digital design principles
-3. ✓ Modular architecture (separation of control and datapath)
-4. ✓ I/O synchronization and metastability prevention
-5. ✓ Register-level modeling of MCU internals
-6. ✓ Comprehensive testbench development
-
-### Assessment Criteria Checklist
-- [x] FSM-based control unit implementation
-- [x] Microcontroller architecture modeling
-- [x] Software-only simulation (no physical hardware)
-- [x] Modular Verilog design
-- [x] Comprehensive testing
-- [x] Professional documentation
-- [x] Interactive demonstration capability
-
----
-
-## 🎤 Demonstration Guide
-
-For a 5-minute live demo, see [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md)
-
-**Quick Demo Flow:**
-1. **Show architecture** (30s) - Explain MCU mapping
-2. **Live interaction** (2m) - Insert coins, dispense item, show change
-3. **Step-by-step FSM** (1.5m) - Enable step mode, explain transitions
-4. **Waveforms** (1m) - Show signal timing and state changes
-
----
-
-## 📚 Viva Preparation
-
-See [`VIVA_GUIDE.md`](VIVA_GUIDE.md) for detailed Q&A
-
-**Common Topics:**
-- Why FSM for microcontrollers?
-- State transition logic explanation
-- Difference between control and datapath
-- How to implement on real MCU (Arduino/STM32)
-- Synchronization and metastability
-
----
-
-## 🔮 Future Extensions
-
-1. **Hardware Implementation**
-   - Deploy on FPGA (Xilinx/Altera)
-   - Implement on Arduino/STM32 in C
-   - Add physical coin sensors and motors
-
-2. **Feature Enhancements**
-   - Multiple items with different prices
-   - Inventory management
-   - LCD/7-segment display driver
-   - Coin validation logic
-
-3. **Advanced Features**
-   - UART communication for logging
-   - Error detection and recovery
-   - Power management states
-   - Security features (anti-fraud)
-
----
-
-## 👨‍💻 Technical Details
-
-### FSM State Encoding
-- **Binary encoding:** 3 bits for 5 states
-- **States:**
-  - `000` - IDLE
-  - `001` - ACCEPT_COIN
-  - `010` - WAIT_SELECTION
-  - `011` - DISPENSE_ITEM
-  - `100` - RETURN_CHANGE
-
-### Signal Specifications
-- **Clock Frequency:** Configurable (100MHz for simulation)
-- **Reset:** Synchronous, active-high
-- **Credit Register:** 8-bit unsigned (0-255)
-- **Inputs:** Positive-edge triggered pulses
-- **Outputs:** Level-triggered signals
+- **`clean-code`**: Modular separation between combinational gate logic and sequential clock registers.
+- **`diagram-design`**: State transition diagrams and gate-level circuit schematics.
 
 ---
 
 ## 📄 License
 
-This project is created for academic purposes as part of ADLD and Microcontroller coursework.
-
----
-
-## 🙏 Acknowledgments
-
-- Verilog HDL standards (IEEE 1364-2005)
-- Microcontroller architecture principles
-- FSM design best practices for embedded systems
-
----
-
-## 📞 Support
-
-For questions or issues:
-- Review the Verilog code comments
-- Check `VIVA_GUIDE.md` for conceptual explanations
-- Use the interactive demo to understand behavior
-- Examine waveforms for timing analysis
-
----
-
-**Project Year:** 2026  
-**Domain:** ADLD + Microcontrollers  
-**Implementation:** Software-only FSM Simulation
+Distributed under the [MIT License](LICENSE). Maintained by [Jaswanth Reddy](https://github.com/Jaswanth1902) — *Passionate learner & creative problem solver learning from and giving back to the open-source community.*
